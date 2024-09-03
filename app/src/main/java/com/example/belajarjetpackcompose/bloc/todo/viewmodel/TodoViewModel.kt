@@ -56,11 +56,9 @@ class TodoViewModel : ViewModel(){
             }
 
             if (oldData != null) {
-                // Menghapus user dari list jika oldData ditemukan
                 val newData = currentState.listData.filter { it.id != user.id }
                 _todos.value = State.Success(newData)
             } else {
-                // Jika user tidak ditemukan di list
                 _todos.value = State.Error("Data not found")
             }
         } else {

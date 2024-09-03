@@ -15,5 +15,4 @@ sealed class Event {
     ) : Event()
 
     object ClearData : Event()
-
 }

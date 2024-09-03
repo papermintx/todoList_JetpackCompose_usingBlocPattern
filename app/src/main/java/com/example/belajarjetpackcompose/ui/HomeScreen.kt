@@ -50,12 +50,7 @@ import com.example.belajarjetpackcompose.models.UserModel
 @Composable
 fun HomeScreen(modifier: Modifier = Modifier, viewModel: TodoViewModel) {
     val state by viewModel.todoState.observeAsState()
-    var name by remember { mutableStateOf("") }
-    var email by remember { mutableStateOf("") }
-    var numberPhone by remember { mutableStateOf("") }
-    var isMarried by remember { mutableStateOf(false) }
     var showDialog by remember { mutableStateOf(false) }
-    var editUser by remember { mutableStateOf<UserModel?>(null) }
 
     Scaffold(
         topBar = {
@@ -66,6 +61,7 @@ fun HomeScreen(modifier: Modifier = Modifier, viewModel: TodoViewModel) {
                 Icon(imageVector = Icons.Filled.Add, contentDescription = "Add")
             }
         }
+
     ) { innerPadding ->
         Column(
             modifier = Modifier
@@ -76,153 +72,176 @@ fun HomeScreen(modifier: Modifier = Modifier, viewModel: TodoViewModel) {
                 is State.Loading -> Text("Loading...")
                 is State.Empty -> Text("No data available")
                 is State.Error -> Text("Error: ${(state as State.Error).message}")
-                is State.Success -> {
-                    LazyColumn {
-                        val users = (state as State.Success).listData
-                        items(users.size) { index ->
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(vertical = 8.dp)
-                                    .background(Color.DarkGray)
-                                    .padding(16.dp) ,
-                                        verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.SpaceBetween
-
-                            ) {
-                                Text(
-                                    text = "${index + 1}",
-                                    Modifier
-                                        .padding(16.dp)
-                                    ,
-                                    fontWeight = FontWeight.Bold,
-                                    color = Color.White,
-                                    fontSize = 25.sp
-
-                                )
-                                Column (
-                                    modifier = Modifier.weight(1f)
-
-                                ){
-
-                                    Text(
-                                        text = users[index].name,
-                                    )
-                                    Text(text = users[index].email)
-                                    Text(text = users[index].numberPhone.toString())
-                                    Text(text = users[index].isMarried.toString())
-                                }
-
-
-                                IconButton(onClick = {
-                                    editUser = users[index]
-                                }) {
-                                    Icon(imageVector = Icons.Filled.Edit, contentDescription = "Edit")
-                                }
-                                IconButton(onClick = {
-                                    viewModel.onEvent(Event.RemoveData(users[index]))
-                                }) {
-                                    Icon(imageVector = Icons.Filled.Delete, contentDescription = "Delete")
-                                }
-                            }
-                        }
-                    }
-                }
-
+                is State.Success -> ListDataView(state = (state as State.Success).listData, viewModel = viewModel)
                 else -> {
                     Text("Unknown state")
                 }
 
-
-
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
-
-            if (editUser != null) {
-                val userToEdit = editUser!!
-                Button(onClick = {
-                    if (name.isNotBlank() && email.isNotBlank() && numberPhone.isNotBlank()) {
-                        viewModel.onEvent(Event.EditData(userToEdit.copy(
-                            name = name,
-                            email = email,
-                            numberPhone = numberPhone.toLong(),
-                            isMarried = isMarried
-                        )))
-                        name = ""
-                        email = ""
-                        numberPhone = ""
-                        isMarried = false
-                        editUser = null
-                    }
-                }) {
-                    Text("Save Changes")
-                }
-            }
         }
 
         if (showDialog) {
-            AlertDialog(
-                onDismissRequest = { showDialog = false },
-                title = { Text("Add New User") },
-                text = {
-                    Column {
-                        OutlinedTextField(
-                            value = name,
-                            onValueChange = { name = it },
-                            label = { Text("Name") }
-                        )
-                        OutlinedTextField(
-                            value = email,
-                            onValueChange = { email = it },
-                            label = { Text("Email") }
-                        )
-                        OutlinedTextField(
-                            value = numberPhone,
-                            onValueChange = { numberPhone = it },
-                            label = { Text("Phone Number") },
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
-                        )
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.padding(top = 8.dp)
-                        ) {
-                            Checkbox(
-                                checked = isMarried,
-                                onCheckedChange = { isMarried = it }
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("Married")
-                        }
-                    }
-                },
-                confirmButton = {
-                    Button(onClick = {
-                        if (name.isNotBlank() && email.isNotBlank() && numberPhone.isNotBlank()) {
-
-                            val newUser = UserModel(
-                                name = name,
-                                email = email,
-                                numberPhone = numberPhone.toLong(),
-                                isMarried = isMarried
-                            )
-                            viewModel.onEvent(Event.AddData(newUser))
-                            name = ""
-                            email = ""
-                            numberPhone = ""
-                            isMarried = false
-                            showDialog = false
-                        }
-                    }) {
-                        Text("Add")
-                    }
-                },
-                dismissButton = {
-                    TextButton(onClick = { showDialog = false }) {
-                        Text("Cancel")
-                    }
+            MyDialog(
+                user = null,
+                onDismiss = { showDialog = false },
+                onConfirm = {
+                    viewModel.onEvent(Event.AddData(it))
+                    showDialog = false
                 }
             )
+
+        }
+    }
+
+}
+
+@Composable
+fun MyDialog(
+//    modifier: Modifier = Modifier,
+    user: UserModel?,
+    onDismiss: () -> Unit,
+    onConfirm: (UserModel) -> Unit
+) {
+
+    var name by remember { mutableStateOf(user?.name ?: "") }
+    var email by remember { mutableStateOf(user?.email ?: "") }
+    var numberPhone by remember { mutableStateOf(user?.numberPhone?.toString() ?: "") }
+    var isMarried by remember { mutableStateOf(user?.isMarried ?: false) }
+
+    if (user != null) {
+        name = user.name
+        email = user.email
+        numberPhone = user.numberPhone.toString()
+        isMarried = user.isMarried
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            if (user == null) Text("Add New User") else Text("Edit User")
+        },
+        text = {
+            Column {
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    label = { Text("Name") }
+                )
+                OutlinedTextField(
+                    value = email,
+                    onValueChange = { email = it },
+                    label = { Text("Email") }
+                )
+                OutlinedTextField(
+                    value = numberPhone,
+                    onValueChange = { numberPhone = it },
+                    label = { Text("Phone Number") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(top = 8.dp)
+                ) {
+                    Checkbox(
+                        checked = isMarried,
+                        onCheckedChange = { isMarried = it }
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Married")
+                }
+            }
+        },
+        confirmButton = {
+            Button(onClick = {
+                if (name.isNotBlank() && email.isNotBlank() && numberPhone.isNotBlank()) {
+                    val newUser = UserModel(
+                        name = name,
+                        email = email,
+                        numberPhone = numberPhone.toLong(),
+                        isMarried = isMarried
+                    )
+                    onConfirm(newUser)
+                    name = ""
+                    email = ""
+                    numberPhone = ""
+                    isMarried = false
+                }
+            }) {
+                Text("Add")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
+
+}
+
+@Composable
+fun ListDataView(modifier: Modifier = Modifier, state: List<UserModel>, viewModel: TodoViewModel ) {
+    var showDialog by remember { mutableStateOf(false) }
+    if(state.isEmpty()){
+        Text("No data available")
+    }
+    LazyColumn {
+        items(state.size) { index ->
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 8.dp)
+                    .background(Color.DarkGray)
+                    .padding(16.dp) ,
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+
+            ) {
+                Text(
+                    text = "${index + 1}",
+                    Modifier
+                        .padding(16.dp)
+                    ,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White,
+                    fontSize = 25.sp
+
+                )
+                Column (
+                    modifier = Modifier.weight(1f)
+
+                ){
+
+                    Text(
+                        text = state[index].name,
+                    )
+                    Text(text = state[index].email)
+                    Text(text = state[index].numberPhone.toString())
+                    Text(text = state[index].isMarried.toString())
+                }
+                if (showDialog) {
+                    MyDialog(
+                        user = state[index],
+                        onDismiss = { showDialog = false },
+                        onConfirm = {
+                            viewModel.onEvent(Event.EditData(it))
+                            showDialog = false
+                        }
+                    )
+                }
+
+                IconButton(onClick = {
+                    showDialog = true
+                }) {
+                    Icon(imageVector = Icons.Filled.Edit, contentDescription = "Edit")
+                }
+                IconButton(onClick = {
+                    viewModel.onEvent(Event.RemoveData(state[index]))
+                }) {
+                    Icon(imageVector = Icons.Filled.Delete, contentDescription = "Delete")
+                }
+            }
         }
     }
 
