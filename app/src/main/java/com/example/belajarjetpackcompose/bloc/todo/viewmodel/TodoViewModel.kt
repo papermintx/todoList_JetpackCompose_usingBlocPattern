@@ -5,12 +5,11 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import com.example.belajarjetpackcompose.models.UserModel
 
-
-
 class TodoViewModel : ViewModel(){
     private val _todos = MutableLiveData<State>(State.Empty)
 
     val todoState: LiveData<State> get() = _todos
+
     init {
         _todos.value = State.Success(emptyList())
     }
